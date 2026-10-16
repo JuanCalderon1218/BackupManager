@@ -1,0 +1,93 @@
+name: Backup PostgreSQL cifrado y prueba de restauracion
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 7 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  full-backup:
+    name: pg_dump + pg_restore + cifrado
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: restore_verify
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: verify_only_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d restore_verify"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
+    steps:
+      - name: Verificar secrets y conexion directa
+        shell: bash
+        run: |
+          if [ -z "$BACKUP_DATABASE_URL" ] || [ -z "$BACKUP_ENCRYPTION_PASSWORD" ]; then
+            echo '::error::Configura BACKUP_DATABASE_URL y BACKUP_ENCRYPTION_PASSWORD.'
+            exit 1
+          fi
+          if [[ "$BACKUP_DATABASE_URL" == *-pooler.* ]]; then
+            echo '::error::pg_dump en Neon necesita una URL directa, sin -pooler.'
+            exit 1
+          fi
+          mkdir -p backups
+
+      - name: Crear copia completa PostgreSQL con pg_dump
+        shell: bash
+        run: |
+          docker run --rm -e DATABASE_URL="$BACKUP_DATABASE_URL" postgres:17 \
+            sh -c 'exec pg_dump --format=custom --no-owner --no-acl --dbname="$DATABASE_URL"' \
+            > backups/full.dump
+          test -s backups/full.dump
+          echo 'pg_dump creo un dump custom con datos y esquema.'
+
+      - name: Restaurar copia en base temporal independiente
+        shell: bash
+        run: |
+          docker run --rm --network host \
+            -e PGPASSWORD=verify_only_password \
+            -v "$PWD/backups:/data:ro" postgres:17 \
+            pg_restore --exit-on-error --clean --if-exists --no-owner --no-acl \
+            -h 127.0.0.1 -U postgres -d restore_verify /data/full.dump
+          records=$(docker run --rm --network host \
+            -e PGPASSWORD=verify_only_password postgres:17 \
+            psql -h 127.0.0.1 -U postgres -d restore_verify -Atc \
+            'SELECT COUNT(*) FROM public.records')
+          if ! [[ "$records" =~ ^[0-9]+$ ]]; then
+            echo '::error::No se pudo verificar la tabla records restaurada.'
+            exit 1
+          fi
+          echo "Restauracion exitosa en base aislada. Registros: $records"
+
+      - name: Cifrar dump antes de publicarlo como artefacto
+        shell: bash
+        run: |
+          file="backups/backup_${GITHUB_RUN_ID}_$(date -u +%Y%m%dT%H%M%SZ).dump.enc"
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 250000 \
+            -in backups/full.dump -out "$file" \
+            -pass env:BACKUP_ENCRYPTION_PASSWORD
+          sha256sum "$file" > "${file}.sha256"
+          rm backups/full.dump
+          test -s "$file"
+          echo 'Backup cifrado listo para conservarse temporalmente.'
+
+      - name: Guardar artefacto cifrado por 7 dias
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-backup-cifrado-${{ github.run_id }}
+          path: |
+            backups/*.dump.enc
+            backups/*.dump.enc.sha256
+          if-no-files-found: error
+          retention-days: 7

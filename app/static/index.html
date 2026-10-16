@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f8">
+  <title>BackupManager | Control de respaldos</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="project-name"><div class="project-mark">BM</div><div><strong>BackupManager</strong><span>Base de Datos II</span></div></div>
+      <div class="nav-label">MEN&Uacute;</div>
+      <nav aria-label="Secciones">
+        <button type="button" class="nav-item selected" data-page="overview">Resumen</button>
+        <button type="button" class="nav-item" data-page="records">Registros</button>
+        <button type="button" class="nav-item" data-page="backups">Respaldos</button>
+        <button type="button" class="nav-item" data-page="events">Historial</button>
+      </nav>
+      <div class="sidebar-auth">
+        <label for="token">Token de administrador</label>
+        <input type="password" id="token" autocomplete="off" placeholder="Token del archivo .env">
+        <small>Se usa para crear, editar, descargar y restaurar. No se almacena en el navegador.</small>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><span class="top-kicker">ADMINISTRACI&Oacute;N DE BASE DE DATOS</span><h1 id="location-title">Resumen</h1></div><div id="db-state" class="connection-status">Comprobando conexi&oacute;n...</div></header>
+      <div class="container">
+        <section id="page-overview" class="page active">
+          <div class="section-title"><div><h2>Estado de la aplicaci&oacute;n</h2><p>Datos almacenados y operaciones de respaldo disponibles.</p></div><button type="button" class="btn secondary" id="refresh-btn">Actualizar</button></div>
+          <div class="summary-grid">
+            <div class="summary-card"><span>Motor</span><strong class="medium-value" id="metric-engine">--</strong><small>Conexi&oacute;n actual</small></div>
+            <div class="summary-card"><span>Registros</span><strong id="metric-records">--</strong><small>Tabla records</small></div>
+            <div class="summary-card"><span>Backups PostgreSQL</span><strong id="metric-backups">--</strong><small>Copias completas generadas</small></div>
+            <div class="summary-card"><span>&Uacute;ltima copia completa</span><strong class="small-value" id="metric-last">--</strong><small>Seg&uacute;n el historial</small></div>
+          </div>
+          <div class="two-columns">
+            <article class="panel"><h3>Respaldo completo</h3><p>Genera un archivo <code>.dump</code> con el esquema y los datos de PostgreSQL mediante <code>pg_dump</code>.</p><p id="pg-status-home" class="inline-status">Verificando configuraci&oacute;n...</p><div class="button-row"><button class="btn primary" id="full-backup-home" type="button">Crear copia PostgreSQL</button><button class="btn secondary" id="open-backups" type="button">Ver historial</button></div></article>
+            <article class="panel"><h3>&iquest;C&oacute;mo comprobarlo?</h3><ol class="help-steps"><li>Conecta la aplicaci&oacute;n a PostgreSQL.</li><li>Agrega algunos registros.</li><li>Crea un backup completo y desc&aacute;rgalo.</li><li>Comprueba SHA-256 y ejecuta el workflow de restauraci&oacute;n en GitHub Actions.</li></ol><p class="hint">Las copias guardadas dentro de Render son temporales: conserva los archivos descargados.</p></article>
+          </div>
+        </section>
+        <section id="page-records" class="page">
+          <div class="section-title"><div><h2>Registros</h2><p>Inventario sencillo almacenado en la base conectada.</p></div><button class="btn secondary" type="button" id="seed-btn">Cargar 4 ejemplos</button></div>
+          <div class="panel"><h3 id="record-form-title">Nuevo registro</h3><form id="record-form"><input id="record-id" type="hidden"><div class="form-grid"><label>Nombre<input id="record-name" name="name" minlength="2" maxlength="90" required placeholder="Ejemplo: Servidor web"></label><label>Categor&iacute;a<input id="record-category" name="category" minlength="2" maxlength="50" required placeholder="Ejemplo: Infraestructura"></label><label>Cantidad<input id="record-quantity" name="quantity" type="number" min="0" max="1000000" value="1" required></label></div><div class="form-actions"><button type="submit" class="btn primary" id="save-record-btn">Guardar</button><button type="button" class="btn secondary hidden" id="cancel-edit-btn">Cancelar edici&oacute;n</button></div></form></div>
+          <div class="panel table-panel"><div class="panel-heading"><h3>Listado de registros</h3><span id="records-count" class="count">0 registros</span></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Nombre</th><th>Categor&iacute;a</th><th>Cantidad</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody id="records-body"><tr><td colspan="6">Cargando...</td></tr></tbody></table></div></div>
+        </section>
+        <section id="page-backups" class="page">
+          <div class="section-title"><div><h2>Respaldos de la base de datos</h2><p>Dos tipos de copia para practicar estrategias diferentes.</p></div></div>
+          <div class="panel backup-panel"><div class="panel-heading"><div><h3>1. Copia completa de PostgreSQL</h3><p>Respalda estructura y contenido de todas las tablas con <code>pg_dump -Fc</code>.</p></div><button type="button" class="btn primary" id="full-backup-btn">Crear backup .dump</button></div><p class="inline-status" id="pg-status">Comprobando cliente y conexi&oacute;n...</p><p class="hint">Al crear una copia se descarga autom&aacute;ticamente. No depende de que el servidor conserve el archivo. Para almacenar otra copia cifrada durante 7 d&iacute;as, ejecuta el workflow de GitHub Actions.</p><div class="table-wrap"><table><thead><tr><th>Respaldo</th><th>Fecha</th><th>Tama&ntilde;o</th><th>Archivo</th><th>Acciones</th></tr></thead><tbody id="full-backups-body"><tr><td colspan="5">Cargando...</td></tr></tbody></table></div><p id="full-backups-count" class="foot-count"></p><p id="pg-restore-note" class="hint"></p></div>
+          <div class="panel backup-panel"><div class="panel-heading"><div><h3>2. Exportaci&oacute;n de la tabla records</h3><p>Copia parcial en JSON. Se puede restaurar esta tabla sin modificar las otras.</p></div><button type="button" class="btn secondary" id="json-backup-btn">Crear copia JSON</button></div><div class="table-wrap"><table><thead><tr><th>Archivo</th><th>Fecha</th><th>Filas</th><th>Integridad</th><th>Acciones</th></tr></thead><tbody id="backups-body"><tr><td colspan="5">Cargando...</td></tr></tbody></table></div><p id="backups-count" class="foot-count"></p></div>
+        </section>
+        <section id="page-events" class="page">
+          <div class="section-title"><div><h2>Historial de operaciones</h2><p>Registro de acciones realizadas desde esta aplicaci&oacute;n.</p></div></div>
+          <div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Operaci&oacute;n</th><th>Detalle</th></tr></thead><tbody id="events-body"><tr><td colspan="3">Cargando...</td></tr></tbody></table></div></div>
+          <div class="note"><strong>Alcance:</strong> esta aplicaci&oacute;n registra operaciones b&aacute;sicas. Un respaldo completo incluye los datos y el esquema de PostgreSQL; el JSON contiene &uacute;nicamente los registros del inventario. La restauraci&oacute;n total se prueba en otra base de datos o en el workflow automatizado, nunca directamente sobre producci&oacute;n.</div>
+        </section>
+        <footer>BackupManager &middot; Pr&aacute;ctica de Base de Datos II &middot; <a href="/docs" target="_blank" rel="noopener">Documentaci&oacute;n API</a></footer>
+      </div>
+    </main>
+  </div>
+  <div role="status" aria-live="polite" id="toast" class="toast"></div>
+</body>
+</html>

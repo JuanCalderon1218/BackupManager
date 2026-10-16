@@ -1,0 +1,21 @@
+BACKUPMANAGER - BASE DE DATOS 2
+Trabajo: Database Backup Strategies (sin MS SQL Server)
+
+Integrante: [ESCRIBE TU NOMBRE]
+
+1. Repositorio publico GitHub:
+   PENDIENTE - https://github.com/TU_USUARIO/backupmanager-bd2
+
+2. Aplicacion publica en Render:
+   PENDIENTE - https://TU_APP.onrender.com
+
+3. Ejecuciones de GitHub Actions (CI/Deploy y backup):
+   PENDIENTE - https://github.com/TU_USUARIO/backupmanager-bd2/actions
+
+4. Articulo individual Dev.to:
+   PENDIENTE - https://dev.to/TU_USUARIO/...
+
+5. Video publico YouTube (5 minutos o menos):
+   PENDIENTE - https://www.youtube.com/watch?v=...
+
+Aviso: reemplazar todos los PENDIENTE por enlaces comprobados antes de subir.

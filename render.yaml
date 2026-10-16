@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: backupmanager-bd2
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: BACKUP_DATABASE_URL
+        sync: false
+      - key: BACKUP_ADMIN_TOKEN
+        sync: false
